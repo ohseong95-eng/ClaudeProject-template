@@ -1,0 +1,44 @@
+---
+name: audit-aggregate-doc-report
+description: |
+  프로젝트별 감사 JSON 파일을 하나의 Markdown 보고서로 취합한다.
+  발견 사항을 병합하고, 중복 제거, 심각도 정렬, 공통 이슈 그룹화를 수행한다.
+  모든 탐지 에이전트 완료 후 사용한다.
+model: haiku
+tools:
+  - Read
+  - Glob
+  - Grep
+---
+
+# 문서 감사 보고서 취합기
+
+프로젝트별 감사 JSON 파일을 모두 수집하여 단일 취합 Markdown 보고서를 생성한다.
+
+---
+
+## 입력
+
+`YYYY-MM-DD` 형식의 날짜 문자열. 다음 패턴의 파일을 검색한다:
+```
+output/{date}-audit-*.json
+```
+
+---
+
+## 절차
+
+1. **수집**: `output/{date}-audit-*.json` Glob으로 프로젝트별 감사 결과 파일 검색
+2. **읽기**: 각 JSON 파일을 읽고 findings 배열 파싱
+3. **병합**: 모든 발견 사항을 하나의 목록으로 결합, 각각에 출처 프로젝트 태깅
+4. **중복 제거**: 동일한 `type` + `description` + `file` 조합 제거
+5. **정렬**: 심각도 기준 (`error` 우선, `warning` 다음), 프로젝트명 순
+6. **공통 이슈 그룹화**: 2개 이상 프로젝트에서 동일 `type`과 유사 `description`이 발견된 항목 식별
+7. **요약 표 생성**: 프로젝트별 error/warning 수 집계
+8. **출력**: 취합된 Markdown 보고서 작성
+
+---
+
+## 출력
+
+저장 위치: `output/{date}-audit-aggregated.md`

@@ -1,0 +1,82 @@
+---
+name: validate-detect-skill-error
+description: |
+  모든 서브 프로젝트의 skill 파일 오류를 스캔하는 에이전트.
+  유효하지 않은 YAML, 필수 필드 누락, 비표준 필드 등을 검출한다.
+  Use this agent to audit skill file health before applying fixes.
+model: haiku
+tools:
+  - Read
+  - Glob
+  - Grep
+---
+
+# Skill 오류 검출기
+
+ClaudeProjects 서브 프로젝트 전체의 `.claude/skills/*/SKILL.md` 파일을 스캔하여 오류를 보고한다.
+
+---
+
+## 스캔 대상
+
+프로젝트 루트(작업 디렉토리)에서 Glob 패턴 `**/.claude/skills/*/SKILL.md`를 사용하여 루트 및 서브 프로젝트의 모든 skill 파일을 동적으로 탐색한다.
+
+---
+
+## 점검 항목
+
+각 skill 파일에 대해:
+
+1. **YAML Frontmatter 문법**
+   - 유효한 YAML 문법 (`---` 구분자)
+   - 여는/닫는 `---` 존재 여부
+   - YAML 파싱 오류 없음
+
+2. **필수 필드**
+   - `name` 필드 존재 및 비어있지 않음
+   - `description` 필드 존재 및 비어있지 않음
+   - `name` 값이 디렉토리 이름과 일치 (예: `fetch-retrieve-single-page/` → name: `fetch-retrieve-single-page`)
+
+3. **비표준 YAML 필드**
+   - 필수 필드: `name`, `description`
+   - 선택적 필드: `allowed-tools`, `disable-model-invocation`, `user-invocable`, `context`
+   - 위 필드 외의 모든 필드를 비표준으로 표시: `category`, `priority`, `tools_used`, `model`, `tools` 등
+   - `tools`는 에이전트 전용 필드 (skill에서는 `allowed-tools` 사용)
+   - 비표준 필드는 수정이 필요한 오류
+
+4. **디렉토리 명명**
+   - 루트 skill: `{name}.skill-v1.0/` 형식
+   - Repair skill: `{name}.skill-v1.0/` 형식
+   - External_scrap skill: `{name}/` 형식 (버전 접미사 없음 — 불일치로 표시)
+
+5. **이중언어 쌍 확인**
+   - 모든 `SKILL.md`에 같은 디렉토리에 `SKILL.kr`이 있어야 함
+   - 누락된 `.kr` 파일 보고
+
+---
+
+## 출력 형식
+
+결과를 `output/skill-error-detection-report.md`에 저장한다. 형식:
+
+```markdown
+# Skill Error Detection Report
+
+> Generated: YYYY-MM-DD
+
+## Summary
+
+| Project | Files Scanned | Errors | Warnings |
+|---------|--------------|--------|----------|
+| {project} | N | N | N |
+| **Total** | **N** | **N** | **N** |
+
+## Errors by Project
+
+### {project} (.claude/skills/)
+
+#### {skill-name}
+- [ERROR/WARN] {description}
+
+## Overall Status: PASS / FAIL
+```

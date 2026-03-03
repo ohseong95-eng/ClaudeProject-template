@@ -1,0 +1,55 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Edit",
+      "Write",
+      "Glob",
+      "Grep",
+      "WebFetch",
+      "WebSearch",
+      "NotebookRead",
+      "NotebookEdit",
+      "MultiEdit",
+      "Bash(*)"
+    ],
+    "additionalDirectories": [],
+    "deny": [
+      "Bash(rm -rf:*)",
+      "Bash(rm -f:*)",
+      "Bash(rm --no-preserve-root:*)",
+      "Bash(sudo:*)",
+      "Bash(chmod 777:*)",
+      "Bash(chown:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git push --force:*)",
+      "Bash(git clean -fd:*)",
+      "Bash(git clean -f:*)",
+      "Bash(git checkout -- .:*)",
+      "Bash(git checkout -- *:*)",
+      "Bash(git restore .:*)",
+      "Bash(git restore *:*)",
+      "Bash(docker run --privileged:*)",
+      "Bash(docker run --rm:*)",
+      "Bash(docker rm:*)",
+      "Bash(docker prune:*)",
+      "Bash(docker image prune:*)",
+      "Bash(docker volume prune:*)",
+      "Bash(docker system prune:*)",
+      "Bash(mv * /dev/null:*)",
+      "Bash(* > /dev/sd:*)"
+    ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/auto-save-session.py"
+          }
+        ]
+      }
+    ]
+  }
+}

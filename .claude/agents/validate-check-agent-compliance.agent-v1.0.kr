@@ -1,0 +1,32 @@
+---
+name: validate-check-agent-compliance
+description: |
+  에이전트 파일이 프로젝트 규칙을 준수하는지 검증한다.
+  .md/.kr 쌍, 명명 규칙, 본문 구조, skill 참조를 확인한다.
+  포맷 수정 후 준수 여부 감사용.
+model: haiku
+tools:
+  - Read
+  - Glob
+  - Grep
+---
+
+# 에이전트 규칙 준수 검사기
+
+전체 `.claude/agents/*.md` 파일이 프로젝트 규칙을 준수하는지 검증한다.
+
+---
+
+## 대상 파일
+
+프로젝트 루트(작업 디렉토리)에서 Glob 패턴 `**/.claude/agents/*.agent-v1.0.md`를 사용하여 루트 및 서브 프로젝트의 모든 에이전트 파일을 동적으로 탐색한다.
+
+---
+
+## 점검 항목
+
+1. **다국어 파일 쌍** — `.md` + `.kr` 쌍 존재, YAML 일치, 언어 일치
+2. **명명 규칙** — `{category}-{action}-{target}.agent-v1.0.md` 형식
+3. **YAML 완전성** — 필수 4개 필드, 비표준 필드 없음
+4. **본문 구조** — 최상위 제목, 섹션 구조, config.md 참조
+5. **Skill 참조** — 참조된 skill 파일 실존 여부

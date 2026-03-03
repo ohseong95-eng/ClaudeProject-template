@@ -1,0 +1,109 @@
+---
+name: guard-create-temp-backup
+description: 파괴적 작업(파일 이름 변경, 내용 수정, 삭제 등) 전에 대상 파일을 임시 백업한다. 롤백이 필요한 경우 guard-rollback-temp-backup skill로 복구한다.
+---
+
+# guard-create-temp-backup.skill-v1.0
+
+> 파괴적 작업(파일 이름 변경, 내용 수정, 삭제 등) 전에 대상 파일을 임시 백업하는 skill.
+
+---
+
+## 분류
+
+| 항목 | 값 |
+|------|-----|
+| 분류 | guard |
+| 우선순위 | 필수 |
+
+---
+
+## 목적
+
+에이전트가 파일을 변경하기 전에 원본을 임시 디렉토리에 복사하여,
+작업 실패 시 `guard-rollback-temp-backup` skill로 원상 복구할 수 있게 한다.
+
+---
+
+## 백업 절차
+
+### 1. 백업 디렉토리 생성
+
+```
+{프로젝트 루트}/.claude/_temp_backup/{TIMESTAMP}/
+```
+
+- TIMESTAMP 형식: `YYYYMMDD-HHMMSS`
+- 이미 존재하면 재사용하지 않고 새로 생성 (초 단위까지 포함하므로 충돌 없음)
+
+### 2. 대상 파일 복사
+
+변경 예정인 모든 파일을 백업 디렉토리에 복사한다.
+
+```
+원본: {프로젝트}/.claude/skills/old-name.md
+백업: {프로젝트}/.claude/_temp_backup/{TIMESTAMP}/skills/old-name.md
+```
+
+- 디렉토리 구조를 유지하여 복사한다 (상대 경로 보존)
+- 파일뿐 아니라 변경될 참조 파일(CATALOG.md, CLAUDE.md 등)도 함께 백업한다
+
+### 3. 매니페스트 파일 생성
+
+백업 디렉토리에 `_manifest.md`를 생성한다:
+
+```markdown
+# Backup Manifest
+
+- 생성 시각: YYYY-MM-DD HH:MM:SS
+- 에이전트: {호출한 에이전트명}
+- 프로젝트: {대상 프로젝트명}
+- 작업 유형: {rename/edit/delete 등}
+
+## 백업 파일 목록
+
+| # | 원본 경로 | 백업 경로 | 크기 |
+|---|----------|----------|------|
+| 1 | ... | ... | ... |
+
+## 복구 방법
+
+이 백업을 복구하려면 `guard-rollback-temp-backup` skill을 사용한다.
+백업 경로: {백업 디렉토리 전체 경로}
+```
+
+### 4. 백업 검증
+
+- 복사된 파일 수가 매니페스트와 일치하는지 확인
+- 파일 크기가 원본과 일치하는지 확인
+- 검증 실패 시 에이전트에 경고 반환 (작업 진행 중단 권고)
+
+---
+
+## 백업 정리 규칙
+
+- 작업 성공 후 테스트까지 통과하면 백업 디렉토리를 삭제한다
+- 롤백 후에도 백업 디렉토리를 삭제한다
+- `_temp_backup/` 하위에 config.md의 `backup_ttl_hours` 이상 된 백업이 있으면 경고한다
+
+---
+
+## 반환 값
+
+에이전트에게 다음 정보를 반환한다:
+
+```
+backup_path: {백업 디렉토리 전체 경로}
+manifest_path: {매니페스트 파일 경로}
+file_count: {백업된 파일 수}
+status: success | failed
+error: {실패 시 오류 메시지}
+```
+
+---
+
+## 제약
+
+- `_temp_backup/`은 `.claude/` 하위에만 생성한다
+- 바이너리 파일은 `cp` 명령으로 복사한다
+- 백업 실패 시 본 작업을 진행하지 않는다

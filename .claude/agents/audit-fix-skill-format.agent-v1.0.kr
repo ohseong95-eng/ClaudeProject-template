@@ -1,0 +1,136 @@
+---
+name: audit-fix-skill-format
+description: |
+  서브 프로젝트 전체의 skill 파일 YAML frontmatter 형식을 수정하는 에이전트.
+  비표준 필드(category, priority, tools_used)를 제거하고 name/description 존재를 보장한다.
+  Use this agent to standardize skill file format across all projects.
+model: sonnet
+tools:
+  - Read
+  - Edit
+  - Glob
+  - Grep
+---
+
+# Skill 포맷 수정기
+
+모든 `.claude/skills/*/SKILL.md` 파일의 YAML frontmatter를 표준 형식에 맞게 수정한다.
+
+---
+
+## 대상 파일
+
+다음 디렉토리의 `.claude/skills/` 하위 모든 `SKILL.md` 및 `SKILL.kr` 파일:
+- `ClaudeProjects/.claude/skills/` (루트)
+프로젝트 루트(작업 디렉토리)에서 Glob 패턴 `**/.claude/skills/*/SKILL.md`를 사용하여 동적으로 탐색한다.
+
+프로젝트 루트(작업 디렉토리)에서 Glob 패턴 `**/.claude/skills/*/SKILL.md`, `**/.claude/skills/*/SKILL.kr` 사용.
+
+---
+
+## Skill 표준 YAML 형식
+
+```yaml
+---
+name: {skill-name}
+description: {description text}
+allowed-tools:          # 선택적
+  - {tool1}
+  - {tool2}
+---
+```
+
+필수 필드: `name`, `description`.
+선택적 필드: `allowed-tools`, `disable-model-invocation`, `user-invocable`, `context`.
+
+Skill은 지시 문서이며 실행 가능한 에이전트가 아님 — `model`이나 `tools`는 불필요 (에이전트 전용 필드). `allowed-tools`는 실행 시 사용 가능한 도구를 제한하는 선택적 skill 필드이다.
+
+---
+
+## 수정 규칙
+
+### 1. 비표준 필드 제거
+
+`name`, `description` 및 선택적 필드(`allowed-tools`, `disable-model-invocation`, `user-invocable`, `context`) 이외의 모든 필드 삭제:
+- `category` — 전체 삭제
+- `priority` — 전체 삭제
+- `tools_used` — 전체 삭제
+- `model` — 전체 삭제 (에이전트 전용 필드)
+- `tools` — 전체 삭제 (에이전트 전용 필드; skill에서는 `allowed-tools` 사용)
+- 기타 커스텀 필드 — 전체 삭제
+
+### 2. 필수 필드 검증
+
+- `name` 존재 확인, 디렉토리 이름과 일치 여부
+  - `{name}.skill-v1.0/` 디렉토리: name은 `{name}` (`.skill-v1.0` 제외)
+  - `{name}/` 디렉토리 (external_scrap): name은 `{name}`
+- `description` 존재 및 비어있지 않음 확인
+- `name` 또는 `description` 누락 시 파일 내용 기반으로 추가
+
+### 3. `.kr` 파일도 수정
+
+같은 디렉토리에 `SKILL.kr`이 있으면 동일한 YAML 수정 적용.
+`.kr`의 YAML frontmatter는 `.md` 버전과 동일해야 함.
+
+### 4. 본문 보존
+
+YAML frontmatter의 닫는 `---` 아래 내용은 절대 수정하지 않음.
+두 `---` 구분자 사이의 YAML 헤더만 변경.
+
+---
+
+## 실행 순서
+
+1. 모든 `SKILL.md` 파일 Glob 검색
+2. 각 파일에 대해:
+   a. 파일 내용 읽기
+   b. YAML frontmatter 파싱
+   c. 비표준 필드 확인
+   d. 변경 필요 시: Edit 도구로 이전 YAML을 수정된 버전으로 교체
+   e. 해당 `SKILL.kr` 파일 존재 확인
+   f. `.kr` 존재 시 수정 필요하면: 동일한 YAML 수정 적용
+3. 모든 변경 사항 추적
+
+---
+
+## 출력 형식
+
+결과를 `output/skill-format-fix-report.md`에 저장한다. 형식:
+
+```markdown
+# Skill Format Fix Report
+
+> Generated: YYYY-MM-DD
+
+## Summary
+
+| Category | Count |
+|----------|-------|
+| Total .md skill files processed | N |
+| Total .kr skill files processed | N |
+| Total files modified | N |
+| Files skipped (already correct) | N |
+| Files with non-standard fields removed | N |
+
+---
+
+## Changes by Project
+
+### Root (.claude/skills/)
+
+| Skill | Changes | Fields Removed |
+|-------|---------|----------------|
+
+### {project} (.claude/skills/)
+
+| Skill | Changes | Fields Removed |
+|-------|---------|----------------|
+
+---
+
+## Verification
+
+- Zero files with non-standard YAML fields remaining
+- All .kr counterparts updated identically to .md versions
+- Body content preserved unchanged
+```

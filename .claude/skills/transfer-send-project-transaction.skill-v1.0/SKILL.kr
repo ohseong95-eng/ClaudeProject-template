@@ -1,0 +1,61 @@
+---
+name: transfer-send-project-transaction
+description: project_transactions/를 통해 다른 프로젝트로 데이터를 전송한다. 프로젝트 간 결과나 보고서를 전달할 때 사용한다.
+---
+
+# Skill: 프로젝트 간 트랜잭션 전송
+
+에이전트가 다른 프로젝트에 데이터를 전달할 때 따르는 프로토콜이다.
+
+## 전송 절차
+
+### 1. 발신 프로젝트 식별
+
+현재 작업 중인 프로젝트를 판별한다.
+- 루트에서 실행 시 발신자는 `root`
+
+### 2. SESSION_ID 결정
+
+`project_transactions/` 폴더에서 오늘 날짜(YYYYMMDD) 파일 수 + 1로 순번 결정.
+
+```
+SESSION_ID = YYYYMMDD-{4자리 순번}
+```
+
+### 3. 수신 프로젝트 상태 확인
+
+`project-registry` skill로 수신 프로젝트의 상태를 확인한다.
+- **사용 금지** 프로젝트에는 전송하지 않는다
+
+### 4. 파일 생성
+
+**파일명:**
+```
+project_transactions/{발신 프로젝트}→{수신 프로젝트}-{SESSION_ID}-<내용 요약>.md
+```
+
+**파일 내용:**
+```markdown
+# Project Transaction
+
+| 항목 | 값 |
+|------|---|
+| 발신 | {발신 프로젝트} |
+| 수신 | {수신 프로젝트} |
+| SESSION_ID | {SESSION_ID} |
+| 생성 시각 | YYYY-MM-DD HH:MM:SS |
+| 상태 | pending |
+
+## 전달 데이터
+
+(전달할 데이터)
+
+## 기대 동작
+
+(수신 프로젝트에게 기대하는 처리 내용)
+```
+
+## 규칙
+
+- 전송 완료 후 파일 경로를 보고한다
+- 수신 프로젝트가 원본을 수정하지 않는다 (읽기 전용)
